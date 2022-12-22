@@ -1,19 +1,21 @@
 import datetime
 import requests
 import json
-import datetime 
+from datetime import date
+from datetime import timedelta
+from datetime import datetime
 
 def main():
     # Create variable to store target URL
     url = ' https://atviras.vplanas.lt/arcgis/rest/services/Aplinkosauga/Oro_tarsa/MapServer/3/query'
     
     # Execute the function with the URL created. 
-    get_time(url)
+    compare_records(url)
 
-def get_time(url):
+def compare_records(url):
     
     """
-    Compare the attributes of two sensors with the same index.
+    Check if sensor's reading were from yesterday.
     
     Parameters:
         data (dict): A dictionary containing a list of sensors in the 'features' key. Each sensor is represented as a dictionary with an 'attributes' key containing sensor metadata.
@@ -35,9 +37,9 @@ def get_time(url):
     'f':'pjson'}
     
     response = requests.get(url, params=query_to_get_no_of_sensors)
-    data = json.loads(json.dumps(response.json()))
-    
-    
+    data = json.loads(json.dumps(response.json())) 
+    yesterday = date.today() - timedelta(days = 1)
+
     # Loop through the list of sensors in data
     for sensor in data['features']:
         
@@ -48,7 +50,7 @@ def get_time(url):
         'returnIdsOnly':'false',
         'returngeometry':'false',
         'orderByFields':'last_seen DESC',
-        'resultRecordCount':'2',
+        'resultRecordCount':'1',
         'f':'pjson'}
         
         # Flag to store whether the two sensors are the same or not
@@ -59,18 +61,16 @@ def get_time(url):
         
         # Load the response data as JSON
         sensor_data = json.loads(json.dumps(sensor_response.json()))
-        
-        # Loop through the attributes of the first sensor
-        for attribute in sensor_data['features'][0]['attributes']:
-            # Skip the 'last_seen' attribute, as it is expected to be different
-            if attribute != 'last_seen':
-                 # If any other attribute is different between the two sensors, set sensor_the_same to False and break the loop
-                if not sensor_data['features'][0]['attributes'][attribute] == sensor_data['features'][1]['attributes'][attribute]:
-                    sensor_the_same = False
-                    break
-                
-        # Add an entry to the result_set dictionary with the sensor index as the key and the value of sensor_the_same
-        result_set[str(sensor['attributes']['sensor_index'])] = sensor_the_same
+
+        # Compare date of the sensor and yesterday
+        if str(datetime.fromtimestamp(sensor_data['features'][0]['attributes']['last_seen'] / 1000).strftime('%Y-%m-%d')) == str(yesterday):
+
+            # If true, mark that the most recent readings are from yesterday
+            result_set[str(sensor['attributes']['sensor_index'])] = True
+        else:
+
+            # If false, mark that the most recent readings are from some other date
+            result_set[str(sensor['attributes']['sensor_index'])] = False
         
     # Return the result_set dictionary
     return result_set
