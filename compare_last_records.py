@@ -41,7 +41,8 @@ def get_time(url):
                     sensor_the_same = False
                     break
         result_set[str(sensor['attributes']['sensor_index'])] = sensor_the_same
-        
+    
+    print(result_set)
     return result_set
 
 if __name__ == "__main__":
